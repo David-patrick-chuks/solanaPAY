@@ -77,33 +77,9 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Generate Payment Request
-app.post("/api/pay", async (req, res) => {
-  try {
-    const reference = new Keypair().publicKey;
-    const message = `Purchase of Zule Mesh AI - Twitter reCAPTCHA Solver (Order #${
-      Math.floor(Math.random() * 999999) + 1
-    })`;
-    const urlData = await generateUrl(
-      recipient,
-      amount,
-      reference,
-      label,
-      message,
-      memo
-    );
-    const ref = reference.toBase58();
-    paymentRequests.set(ref, { recipient, amount, memo });
-    const { url } = urlData;
-    res.status(200).json({ url: url.toString(), ref });
-  } catch (error) {
-    console.error("Error:", error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-});
 
 // Generate QR Code
-app.post("/api/qr-live", async (req, res) => {
+app.post("/api/payment/qr-live", async (req, res) => {
   try {
     const reference = new Keypair().publicKey;
     const message = `Purchase of Zule Mesh AI - Twitter reCAPTCHA Solver (Order #${
@@ -147,7 +123,7 @@ app.post("/api/qr-live", async (req, res) => {
 });
 
 // Verify Payment Request
-app.get("/api/pay", async (req, res) => {
+app.get("/api/payment/verify", async (req, res) => {
   try {
     // 1 - Get the reference query parameter
     const reference = req.query.reference;
@@ -177,11 +153,6 @@ app.get("/ping", async (req, res) => {
   res.status(200).json({ message: "ZULE to the fucking moon 🌕" });
 });
 
-
-// Handle Invalid Requests
-// app.use((req, res) => {
-//   res.status(405).json({ error: "Method Not Allowed" });
-// });
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
