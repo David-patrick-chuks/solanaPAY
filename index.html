@@ -1,106 +1,116 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QuickNode Solana Pay Demo</title>
-  <style>
-    body {
-      background-color: #000;
-      color: #fff;
-      font-family: Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      margin: 0;
-    }
-    h1 {
-      font-size: 2.5rem;
-      margin-bottom: 20px;
-    }
-    #qrCode {
-      display: none;
-      background-color: white;
-      padding: 10px;
-      margin-bottom: 20px;
-    }
-    button {
-      cursor: pointer;
-      padding: 10px 20px;
-      margin: 0 10px;
-      background-color: #333;
-      color: #fff;
-      border: none;
-      border-radius: 5px;
-      font-size: 1rem;
-    }
-    button:hover {
-      background-color: #555;
-    }
-    #verifyBtn {
-      display: none;
-    }
-  </style>
-</head>
-<body>
-  <h1>Solana Pay Demo</h1>
-  <img id="qrCode" src="" alt="Solana Pay QR Code" width="200" height="200">
-  <div>
-    <button onclick="handleGenerateClick()">Generate Solana Pay Order</button>
-    <button id="verifyBtn" onclick="handleVerifyClick()">Verify Transaction</button>
-  </div>
-
-  <script>
-    let reference = null;
-    const qrCodeImg = window.document.getElementById('qrCode');
-    const verifyBtn = window.document.getElementById('verifyBtn');
-
-    async function handleGenerateClick() {
-      try {
-        const res = await fetch('http://localhost:3000/api/qr-live', { method: 'POST' });
-        if (!res.ok) throw new Error('Failed to generate QR code');
-        const { qrCode, ref } = await res.json();
-
-        // Display QR code
-        qrCodeImg.src = qrCode;
-        qrCodeImg.style.display = 'block';
-
-        // Store reference and show verify button
-        reference = ref;
-        verifyBtn.style.display = 'inline-block';
-      } catch (error) {
-        console.error('Error:', error);
-        alert('Failed to generate Solana Pay order');
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QuickNode Solana Pay Demo</title>
+    <style>
+      body {
+        background-color: #000;
+        color: #fff;
+        font-family: Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
       }
-    }
-
-    async function handleVerifyClick() {
-      if (!reference) {
-        alert('Please generate a payment order first');
-        return;
+      h1 {
+        font-size: 2.5rem;
+        margin-bottom: 20px;
       }
+      #qrCode {
+        display: none;
+        background-color: white;
+        padding: 10px;
+        margin-bottom: 20px;
+      }
+      button {
+        cursor: pointer;
+        padding: 10px 20px;
+        margin: 0 10px;
+        background-color: #333;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        font-size: 1rem;
+      }
+      button:hover {
+        background-color: #555;
+      }
+      #verifyBtn {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Solana Pay Demo</h1>
+    <img id="qrCode" src="" alt="Solana Pay QR Code" width="200" height="200" />
+    <div>
+      <button onclick="handleGenerateClick()">Generate Solana Pay Order</button>
+      <button id="verifyBtn" onclick="handleVerifyClick()">
+        Verify Transaction
+      </button>
+    </div>
 
-      try {
-        const res = await fetch(`http://localhost:3000/api/pay?reference=${reference}`);
-        if (!res.ok) throw new Error('Failed to verify transaction');
-        const { status } = await res.json();
+    <script>
+      let reference = null;
+      const qrCodeImg = window.document.getElementById("qrCode");
+      const verifyBtn = window.document.getElementById("verifyBtn");
 
-        if (status === 'verified') {
-          alert('Transaction verified');
-          // Reset UI
-          qrCodeImg.style.display = 'none';
-          verifyBtn.style.display = 'none';
-          reference = null;
-        } else {
-          alert('Transaction not found');
+      async function handleGenerateClick() {
+        try {
+          const res = await fetch("http://localhost:3000/api/qr-live", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ total: 100 }),
+          });
+          if (!res.ok) throw new Error("Failed to generate QR code");
+          const { qrCode, ref } = await res.json();
+
+          // Display QR code
+          qrCodeImg.src = qrCode;
+          qrCodeImg.style.display = "block";
+
+          // Store reference and show verify button
+          reference = ref;
+          verifyBtn.style.display = "inline-block";
+        } catch (error) {
+          console.error("Error:", error);
+          alert("Failed to generate Solana Pay order");
         }
-      } catch (error) {
-        console.error('Error:', error);
-        alert('Failed to verify transaction');
       }
-    }
-  </script>
-</body>
+
+      async function handleVerifyClick() {
+        if (!reference) {
+          alert("Please generate a payment order first");
+          return;
+        }
+
+        try {
+          const res = await fetch(
+            `http://localhost:3000/api/pay?reference=${reference}`
+          );
+          if (!res.ok) throw new Error("Failed to verify transaction");
+          const { status } = await res.json();
+
+          if (status === "verified") {
+            alert("Transaction verified");
+            // Reset UI
+            qrCodeImg.style.display = "none";
+            verifyBtn.style.display = "none";
+            reference = null;
+          } else {
+            alert("Transaction not found");
+          }
+        } catch (error) {
+          console.error("Error:", error);
+          alert("Failed to verify transaction");
+        }
+      }
+    </script>
+  </body>
 </html>

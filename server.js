@@ -7,12 +7,12 @@ const { encodeURL, findReference, validateTransfer } = require("@solana/pay");
 const BigNumber = require("bignumber.js");
 const QRCode = require("qrcode"); // Added for server-side QR code generation
 // CONSTANTS
-const myWallet =  process.env.StoreWallet; // Replace with your wallet address
+const myWallet = process.env.StoreWallet; // Replace with your wallet address
 const recipient = new PublicKey(myWallet);
 const amount = new BigNumber(0.005); // 0.0001 SOL
 const label = "Zule Mesh Store";
 const quicknodeEndpoint = process.env.QUICKNODE_ENDPOINT; // Replace with your QuickNode endpoint
-const memo = "This is a payment request for Zule Mesh Store";
+const memo = "Payment for Zule Mesh AI Agent - Twitter reCAPTCHA Solution";
 
 // In-memory storage for payment requests
 const paymentRequests = new Map();
@@ -73,7 +73,6 @@ async function verifyTransaction(reference) {
   }
 }
 
-
 const app = express();
 app.use(express.json());
 app.use(cors());
@@ -82,9 +81,9 @@ app.use(cors());
 app.post("/api/pay", async (req, res) => {
   try {
     const reference = new Keypair().publicKey;
-    const message = `QuickNode Demo - Order ID #0${
+    const message = `Purchase of Zule Mesh AI - Twitter reCAPTCHA Solver (Order #${
       Math.floor(Math.random() * 999999) + 1
-    }`;
+    })`;
     const urlData = await generateUrl(
       recipient,
       amount,
@@ -107,9 +106,17 @@ app.post("/api/pay", async (req, res) => {
 app.post("/api/qr-live", async (req, res) => {
   try {
     const reference = new Keypair().publicKey;
-    const message = `QuickNode Demo - Order ID #0${
+    const message = `Purchase of Zule Mesh AI - Twitter reCAPTCHA Solver (Order #${
       Math.floor(Math.random() * 999999) + 1
-    }`;
+    })`;
+    const body = req.body; // Get total from request body
+    console.log("Request body:", body);
+    if (!body || !body.total) {
+      return res
+        .status(400)
+        .json({ error: "Missing total amount in request body" });
+    }
+    const amount = new BigNumber(body.total || 0.005); // Default to 0.005 SOL if not provided
     const urlData = await generateUrl(
       recipient,
       amount,
@@ -169,6 +176,9 @@ app.get("/api/pay", async (req, res) => {
 // Handle Invalid Requests
 app.use((req, res) => {
   res.status(405).json({ error: "Method Not Allowed" });
+});
+app.get("/", async (req, res) => {
+  res.status(200).json({ message: "ZULE to the fucking moon 🌕" });
 });
 
 const PORT = process.env.PORT || 5000;
