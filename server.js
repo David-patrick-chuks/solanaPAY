@@ -173,12 +173,14 @@ app.get("/api/pay", async (req, res) => {
   }
 });
 
+app.get("/ping", async (req, res) => {
+  res.status(200).json({ message: "ZULE to the fucking moon 🌕" });
+});
+
+
 // Handle Invalid Requests
 app.use((req, res) => {
   res.status(405).json({ error: "Method Not Allowed" });
-});
-app.get("/", async (req, res) => {
-  res.status(200).json({ message: "ZULE to the fucking moon 🌕" });
 });
 
 const PORT = process.env.PORT || 5000;
