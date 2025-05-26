@@ -179,9 +179,9 @@ app.get("/ping", async (req, res) => {
 
 
 // Handle Invalid Requests
-app.use((req, res) => {
-  res.status(405).json({ error: "Method Not Allowed" });
-});
+// app.use((req, res) => {
+//   res.status(405).json({ error: "Method Not Allowed" });
+// });
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
