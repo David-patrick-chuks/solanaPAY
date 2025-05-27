@@ -333,24 +333,75 @@ app.post('/api/payment/success', async (req, res) => {
     await order.save();
 
     // Send Email
+
     const mailOptions = {
-      from: emailUser,
-      to: order.email,
-      subject: 'Zule Mesh Solutions - Order Confirmation',
-      html: `
-        <h1>Order Confirmation</h1>
-        <p>Dear ${order.shippingAddress.fullName},</p>
-        <p>Your order (#${order.orderId}) has been successfully confirmed on ${new Date().toLocaleString('en-US', { timeZone: 'Africa/Lagos' })}. Below are your order details:</p>
-        <ul>
-          <li><strong>Order ID:</strong> ${order.orderId}</li>
-          <li><strong>Tracking Number:</strong> ${order.trackingNumber}</li>
-          <li><strong>Estimated Delivery:</strong> ${order.estimatedDelivery}</li>
-          <li><strong>Total:</strong> ${order.items.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(3)} SOL</li>
-        </ul>
-        <p>Track your order: <a href="http://yourdomain.com/tracking?orderId=${order.orderId}&email=${encodeURIComponent(order.email)}">Track Here</a></p>
-        <p>Thank you for shopping with Zule Mesh Solutions!</p>
-      `
-    };
+  from: emailUser,
+  to: order.email,
+  subject: 'Zule Mesh Solutions - Order Confirmation',
+  html: `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zule Mesh Solutions - Order Confirmation</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, Helvetica, sans-serif; background-color: #000000; color: #ffffff;">
+  <table role="presentation" style="width: 100%; max-width: 600px; margin: 40px auto; background-color: #0a0a0a; border-collapse: collapse; border-radius: 12px; box-shadow: 0 2px 10px rgba(0, 183, 235, 0.15);">
+    <tr>
+      <td style="padding: 20px; text-align: center; background-color: #000000; border-radius: 12px 12px 0 0;">
+        <img src="https://raw.githubusercontent.com/David-patrick-chuks/ZULE_ASSET/main/public/watermark_logo.png" alt="Zule Mesh Solutions Logo" style="max-width: 120px; margin-bottom: 10px;">
+        <h1 style="color: #ffffff; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: 0.5px;">Order Confirmation</h1>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 40px 30px; background-color: #0a0a0a;">
+        <p style="font-size: 16px; line-height: 1.5; color: #e0e0e0; margin: 0 0 20px;">Dear ${order.shippingAddress.fullName},</p>
+        <p style="font-size: 16px; line-height: 1.5; color: #e0e0e0; margin: 0 0 20px;">
+          Your order (#${order.orderId}) was confirmed on ${new Date().toLocaleString('en-US', { timeZone: 'Africa/Lagos' })} (WAT). Review your order details below:
+        </p>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+          <tr>
+            <td style="padding: 12px 0; font-weight: 600; color: #00b7eb; font-size: 14px;">Order ID</td>
+            <td style="padding: 12px 0; color: #ffffff; font-size: 14px; text-align: right;">${order.orderId}</td>
+          </tr>
+          <tr>
+            <td style="padding: 12px 0; font-weight: 600; color: #00b7eb; font-size: 14px;">Tracking Number</td>
+            <td style="padding: 12px 0; color: #ffffff; font-size: 14px; text-align: right;">${order.trackingNumber}</td>
+          </tr>
+          <tr>
+            <td style="padding: 12px 0; font-weight: 600; color: #00b7eb; font-size: 14px;">Estimated Delivery</td>
+            <td style="padding: 12px 0; color: #ffffff; font-size: 14px; text-align: right;">${order.estimatedDelivery}</td>
+          </tr>
+          <tr>
+            <td style="padding: 12px 0; font-weight: 600; color: #00b7eb; font-size: 14px;">Total</td>
+            <td style="padding: 12px 0; color: #ffffff; font-size: 14px; text-align: right;">
+              ${order.items.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(3)} SOL
+            </td>
+          </tr>
+        </table>
+        <p style="text-align: center; margin: 30px 0;">
+          <a href="https://mesh.zuleai.xyz/tracking?orderId=${order.orderId}&email=${encodeURIComponent(order.email)}" 
+             style="display: inline-block; padding: 12px 24px; background-color: #00b7eb; color: #000000; text-decoration: none; font-weight: 600; font-size: 14px; border-radius: 6px; letter-spacing: 0.5px;">Track Your Order</a>
+        </p>
+        <p style="font-size: 16px; line-height: 1.5; color: #e0e0e0; margin: 0;">Thank you for choosing Zule Mesh Solutions.</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 20px; text-align: center; background-color: #000000; border-radius: 0 0 12px 12px; font-size: 12px; color: #999999;">
+        <p style="margin: 0;">Zule Mesh Solutions © 2025</p>
+        <p style="margin: 8px 0 0;">
+          <a href="https://zuleai.xyz" style="color: #00b7eb; text-decoration: none; margin: 0 10px;">zuleai.xyz</a> | 
+          <a href="https://x.com/zulemesh" style="color: #00b7eb; text-decoration: none; margin: 0 10px;">X</a>
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`
+};
+
 
     await transporter.sendMail(mailOptions);
     console.log(`Email sent to ${order.email}`);
