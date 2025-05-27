@@ -6,6 +6,14 @@ const { Connection, Keypair, PublicKey } = require("@solana/web3.js");
 const { encodeURL, findReference, validateTransfer } = require("@solana/pay");
 const BigNumber = require("bignumber.js");
 const QRCode = require("qrcode"); // Added for server-side QR code generation
+
+const mongoose = require("mongoose");
+const nodemailer = require("nodemailer");
+
+const app = express();
+app.use(express.json());
+app.use(cors());
+
 // CONSTANTS
 const myWallet = process.env.StoreWallet; // Replace with your wallet address
 const recipient = new PublicKey(myWallet);
@@ -13,6 +21,80 @@ const amount = new BigNumber(0.005); // 0.0001 SOL
 const label = "Zule Mesh Store";
 const quicknodeEndpoint = process.env.QUICKNODE_ENDPOINT; // Replace with your QuickNode endpoint
 const memo = "Payment for Zule Mesh AI Agent - Twitter reCAPTCHA Solution";
+const mongodbUri = process.env.MONGODB_URI;
+const emailUser = process.env.EMAIL_USER;
+const emailPass = process.env.EMAIL_PASS;
+
+// MongoDB Connection
+mongoose
+  .connect(mongodbUri)
+  .then(() => console.log("Connected to MongoDB"))
+  .catch((err) => console.error("MongoDB connection error:", err));
+
+// Mongoose Schemas
+const orderSchema = new mongoose.Schema({
+  orderId: { type: String, required: true, unique: true },
+  email: { type: String, required: true },
+  status: { type: String, default: "confirmed" },
+  trackingNumber: { type: String, required: true },
+  estimatedDelivery: { type: String, required: true },
+  currentLocation: {
+    type: String,
+    default: "Distribution Center - Los Angeles, CA",
+  },
+  orderDate: { type: String, required: true },
+  shippingMethod: {
+    type: String,
+    default: "Standard Shipping (7-10 business days)",
+  },
+  carrier: { type: String, default: "ZULE Express" },
+  items: [
+    {
+      name: String,
+      size: String,
+      color: String,
+      quantity: Number,
+      price: Number,
+    },
+  ],
+  timeline: [
+    {
+      status: String,
+      date: String,
+      time: String,
+      completed: Boolean,
+      description: String,
+    },
+  ],
+  shippingAddress: {
+    fullName: String,
+    address: String,
+    city: String,
+    state: String,
+    postalCode: String,
+    country: String,
+  },
+  txHash: { type: String },
+});
+
+const Order = mongoose.model("Order", orderSchema);
+
+// Email Transporter
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: emailUser,
+    pass: emailPass,
+  },
+});
+
+function generateOrderId() {
+  return `ZULE${Date.now().toString(36).toUpperCase()}`;
+}
+
+function generateTrackingNumber() {
+  return `ZL${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+}
 
 // In-memory storage for payment requests
 const paymentRequests = new Map();
@@ -46,7 +128,10 @@ async function verifyTransaction(reference) {
       memo,
     });
     console.log("Connection established:", quicknodeEndpoint);
-    const found = await findReference(connection, reference);
+    const found = await findReference(connection, reference, {
+      finality: "confirmed",
+      maxSupportedTransactionVersion: 0,
+    });
     console.log("Transaction found:", found);
 
     if (!found) {
@@ -72,11 +157,6 @@ async function verifyTransaction(reference) {
     return null;
   }
 }
-
-const app = express();
-app.use(express.json());
-app.use(cors());
-
 
 // Generate QR Code
 app.post("/api/payment/qr-live", async (req, res) => {
@@ -149,12 +229,145 @@ app.get("/api/payment/verify", async (req, res) => {
   }
 });
 
+
+// Track Order
+app.get('/api/tracking', async (req, res) => {
+  try {
+    const { email, orderId } = req.query;
+    if (!email || !orderId) return res.status(400).json({ error: 'Missing email or orderId' });
+
+    const order = await Order.findOne({ orderId, email });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+
+    res.status(200).json(order);
+  } catch (error) {
+    console.error('Error tracking order:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// Checkout
+app.post('/api/checkout', async (req, res) => {
+  try {
+    const { fullName, email, address, city, state, postalCode, country, total, items } = req.body;
+    if (!fullName || !email || !address || !total || !items || items.length === 0) {
+      return res.status(400).json({ error: 'Missing required checkout data' });
+    }
+
+    const orderId = generateOrderId();
+    const trackingNumber = generateTrackingNumber();
+    const orderDate = new Date().toLocaleDateString();
+    const estimatedDelivery = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString();
+
+    const orderData = new Order({
+      orderId,
+      email,
+      status: 'confirmed',
+      trackingNumber,
+      estimatedDelivery,
+      orderDate,
+      items,
+      timeline: [
+        {
+          status: 'Order Confirmed',
+          date: orderDate,
+          time: new Date().toLocaleTimeString(),
+          completed: true,
+          description: 'Your order has been confirmed and payment processing initiated',
+        },
+        {
+          status: 'Processing',
+          date: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+          time: '10:00 AM',
+          completed: false,
+          description: 'Order is being prepared and packaged',
+        },
+        {
+          status: 'Shipped',
+          date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+          time: '8:00 AM',
+          completed: false,
+          description: 'Package has been shipped and is in transit',
+        },
+        {
+          status: 'Out for Delivery',
+          date: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+          time: 'Expected',
+          completed: false,
+          description: 'Package is out for delivery to your address',
+        },
+        {
+          status: 'Delivered',
+          date: estimatedDelivery,
+          time: 'Expected',
+          completed: false,
+          description: 'Package delivered to your address',
+        },
+      ],
+      shippingAddress: { fullName, address, city, state, postalCode, country },
+    });
+
+    await orderData.save();
+    res.status(200).json({ orderId, message: 'Checkout successful, proceed with payment' });
+  } catch (error) {
+    console.error('Error during checkout:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// Record Payment Success and Send Email
+app.post('/api/payment/success', async (req, res) => {
+  try {
+    const { reference, orderId } = req.body;
+    if (!reference || !orderId) return res.status(400).json({ error: 'Missing reference or orderId' });
+
+    const order = await Order.findOne({ orderId });
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+
+    order.status = 'processing';
+    order.txHash = reference;
+    order.timeline[0].completed = true; // Order Confirmed
+    order.timeline[1].completed = true; // Processing
+    order.timeline[1].date = new Date().toLocaleDateString();
+    order.timeline[1].time = new Date().toLocaleTimeString();
+    await order.save();
+
+    // Send Email
+    const mailOptions = {
+      from: emailUser,
+      to: order.email,
+      subject: 'Zule Mesh Solutions - Order Confirmation',
+      html: `
+        <h1>Order Confirmation</h1>
+        <p>Dear ${order.shippingAddress.fullName},</p>
+        <p>Your order (#${order.orderId}) has been successfully confirmed on ${new Date().toLocaleString('en-US', { timeZone: 'Africa/Lagos' })}. Below are your order details:</p>
+        <ul>
+          <li><strong>Order ID:</strong> ${order.orderId}</li>
+          <li><strong>Tracking Number:</strong> ${order.trackingNumber}</li>
+          <li><strong>Estimated Delivery:</strong> ${order.estimatedDelivery}</li>
+          <li><strong>Total:</strong> ${order.items.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(3)} SOL</li>
+        </ul>
+        <p>Track your order: <a href="http://yourdomain.com/tracking?orderId=${order.orderId}&email=${encodeURIComponent(order.email)}">Track Here</a></p>
+        <p>Thank you for shopping with Zule Mesh Solutions!</p>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`Email sent to ${order.email}`);
+
+    res.status(200).json({ message: 'Payment success recorded and email sent', orderId, txHash: reference });
+  } catch (error) {
+    console.error('Error recording payment success or sending email:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 app.get("/ping", async (req, res) => {
   res.status(200).json({ message: "ZULE to the fucking moon 🌕" });
 });
-
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
