@@ -81,11 +81,14 @@ const Order = mongoose.model("Order", orderSchema);
 
 // Email Transporter
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.zoho.com",
+  port: 465,
+  secure: true, // use SSL
   auth: {
     user: emailUser,
     pass: emailPass,
   },
+ 
 });
 
 function generateOrderId() {
