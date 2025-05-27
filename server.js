@@ -88,7 +88,6 @@ const transporter = nodemailer.createTransport({
     user: emailUser,
     pass: emailPass,
   },
- 
 });
 
 function generateOrderId() {
@@ -232,102 +231,131 @@ app.get("/api/payment/verify", async (req, res) => {
   }
 });
 
-
 // Track Order
-app.get('/api/tracking', async (req, res) => {
+app.get("/api/tracking", async (req, res) => {
   try {
     const { email, orderId } = req.query;
-    if (!email || !orderId) return res.status(400).json({ error: 'Missing email or orderId' });
+    if (!email || !orderId)
+      return res.status(400).json({ error: "Missing email or orderId" });
 
     const order = await Order.findOne({ orderId, email });
-    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (!order) return res.status(404).json({ error: "Order not found" });
 
     res.status(200).json(order);
   } catch (error) {
-    console.error('Error tracking order:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error("Error tracking order:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
 // Checkout
-app.post('/api/checkout', async (req, res) => {
+app.post("/api/checkout", async (req, res) => {
   try {
-    const { fullName, email, address, city, state, postalCode, country, total, items } = req.body;
-    if (!fullName || !email || !address || !total || !items || items.length === 0) {
-      return res.status(400).json({ error: 'Missing required checkout data' });
+    const {
+      fullName,
+      email,
+      address,
+      city,
+      state,
+      postalCode,
+      country,
+      total,
+      items,
+    } = req.body;
+    if (
+      !fullName ||
+      !email ||
+      !address ||
+      !total ||
+      !items ||
+      items.length === 0
+    ) {
+      return res.status(400).json({ error: "Missing required checkout data" });
     }
 
     const orderId = generateOrderId();
     const trackingNumber = generateTrackingNumber();
     const orderDate = new Date().toLocaleDateString();
-    const estimatedDelivery = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString();
+    const estimatedDelivery = new Date(
+      Date.now() + 7 * 24 * 60 * 60 * 1000
+    ).toLocaleDateString();
 
     const orderData = new Order({
       orderId,
       email,
-      status: 'confirmed',
+      status: "confirmed",
       trackingNumber,
       estimatedDelivery,
       orderDate,
       items,
       timeline: [
         {
-          status: 'Order Confirmed',
+          status: "Order Confirmed",
           date: orderDate,
           time: new Date().toLocaleTimeString(),
           completed: true,
-          description: 'Your order has been confirmed and payment processing initiated',
+          description:
+            "Your order has been confirmed and payment processing initiated",
         },
         {
-          status: 'Processing',
-          date: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-          time: '10:00 AM',
+          status: "Processing",
+          date: new Date(
+            Date.now() + 1 * 24 * 60 * 60 * 1000
+          ).toLocaleDateString(),
+          time: "10:00 AM",
           completed: false,
-          description: 'Order is being prepared and packaged',
+          description: "Order is being prepared and packaged",
         },
         {
-          status: 'Shipped',
-          date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-          time: '8:00 AM',
+          status: "Shipped",
+          date: new Date(
+            Date.now() + 2 * 24 * 60 * 60 * 1000
+          ).toLocaleDateString(),
+          time: "8:00 AM",
           completed: false,
-          description: 'Package has been shipped and is in transit',
+          description: "Package has been shipped and is in transit",
         },
         {
-          status: 'Out for Delivery',
-          date: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-          time: 'Expected',
+          status: "Out for Delivery",
+          date: new Date(
+            Date.now() + 6 * 24 * 60 * 60 * 1000
+          ).toLocaleDateString(),
+          time: "Expected",
           completed: false,
-          description: 'Package is out for delivery to your address',
+          description: "Package is out for delivery to your address",
         },
         {
-          status: 'Delivered',
+          status: "Delivered",
           date: estimatedDelivery,
-          time: 'Expected',
+          time: "Expected",
           completed: false,
-          description: 'Package delivered to your address',
+          description: "Package delivered to your address",
         },
       ],
       shippingAddress: { fullName, address, city, state, postalCode, country },
     });
 
     await orderData.save();
-    res.status(200).json({ orderId, message: 'Checkout successful, proceed with payment' });
+    res
+      .status(200)
+      .json({ orderId, message: "Checkout successful, proceed with payment" });
   } catch (error) {
-    console.error('Error during checkout:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error("Error during checkout:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
 // Record Payment Success and Send Email
-app.post('/api/payment/success', async (req, res) => {
+app.post("/api/payment/success", async (req, res) => {
   try {
     const { reference, orderId } = req.body;
-    if (!reference || !orderId) return res.status(400).json({ error: 'Missing reference or orderId' });
+    if (!reference || !orderId)
+      return res.status(400).json({ error: "Missing reference or orderId" });
 
     const order = await Order.findOne({ orderId });
-    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (!order) return res.status(404).json({ error: "Order not found" });
 
-    order.status = 'processing';
+    order.status = "processing";
     order.txHash = reference;
     order.timeline[0].completed = true; // Order Confirmed
     order.timeline[1].completed = true; // Processing
@@ -338,10 +366,10 @@ app.post('/api/payment/success', async (req, res) => {
     // Send Email
 
     const mailOptions = {
-  from: emailUser,
-  to: order.email,
-  subject: 'Zule Mesh Solutions - Order Confirmation',
-  html: `
+      from: emailUser,
+      to: order.email,
+      subject: "Zule Mesh Solutions - Order Confirmation",
+      html: `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -359,32 +387,48 @@ app.post('/api/payment/success', async (req, res) => {
     </tr>
     <tr>
       <td style="padding: 40px 30px; background-color: #0a0a0a;">
-        <p style="font-size: 16px; line-height: 1.5; color: #e0e0e0; margin: 0 0 20px;">Dear ${order.shippingAddress.fullName},</p>
+        <p style="font-size: 16px; line-height: 1.5; color: #e0e0e0; margin: 0 0 20px;">Dear ${
+          order.shippingAddress.fullName
+        },</p>
         <p style="font-size: 16px; line-height: 1.5; color: #e0e0e0; margin: 0 0 20px;">
-          Your order (#${order.orderId}) was confirmed on ${new Date().toLocaleString('en-US', { timeZone: 'Africa/Lagos' })} (WAT). Review your order details below:
+          Your order (#${
+            order.orderId
+          }) was confirmed on ${new Date().toLocaleString("en-US", {
+        timeZone: "Africa/Lagos",
+      })} (WAT). Review your order details below:
         </p>
         <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
           <tr>
             <td style="padding: 12px 0; font-weight: 600; color: #00b7eb; font-size: 14px;">Order ID</td>
-            <td style="padding: 12px 0; color: #ffffff; font-size: 14px; text-align: right;">${order.orderId}</td>
+            <td style="padding: 12px 0; color: #ffffff; font-size: 14px; text-align: right;">${
+              order.orderId
+            }</td>
           </tr>
           <tr>
             <td style="padding: 12px 0; font-weight: 600; color: #00b7eb; font-size: 14px;">Tracking Number</td>
-            <td style="padding: 12px 0; color: #ffffff; font-size: 14px; text-align: right;">${order.trackingNumber}</td>
+            <td style="padding: 12px 0; color: #ffffff; font-size: 14px; text-align: right;">${
+              order.trackingNumber
+            }</td>
           </tr>
           <tr>
             <td style="padding: 12px 0; font-weight: 600; color: #00b7eb; font-size: 14px;">Estimated Delivery</td>
-            <td style="padding: 12px 0; color: #ffffff; font-size: 14px; text-align: right;">${order.estimatedDelivery}</td>
+            <td style="padding: 12px 0; color: #ffffff; font-size: 14px; text-align: right;">${
+              order.estimatedDelivery
+            }</td>
           </tr>
           <tr>
             <td style="padding: 12px 0; font-weight: 600; color: #00b7eb; font-size: 14px;">Total</td>
             <td style="padding: 12px 0; color: #ffffff; font-size: 14px; text-align: right;">
-              ${order.items.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(3)} SOL
+              ${order.items
+                .reduce((sum, item) => sum + item.price * item.quantity, 0)
+                .toFixed(3)} SOL
             </td>
           </tr>
         </table>
         <p style="text-align: center; margin: 30px 0;">
-          <a href="https://mesh.zuleai.xyz/tracking?orderId=${order.orderId}&email=${encodeURIComponent(order.email)}" 
+          <a href="https://mesh.zuleai.xyz/tracking?orderId=${
+            order.orderId
+          }&email=${encodeURIComponent(order.email)}" 
              style="display: inline-block; padding: 12px 24px; background-color: #00b7eb; color: #000000; text-decoration: none; font-weight: 600; font-size: 14px; border-radius: 6px; letter-spacing: 0.5px;">Track Your Order</a>
         </p>
         <p style="font-size: 16px; line-height: 1.5; color: #e0e0e0; margin: 0;">Thank you for choosing Zule Mesh Solutions.</p>
@@ -402,17 +446,28 @@ app.post('/api/payment/success', async (req, res) => {
   </table>
 </body>
 </html>
-`
-};
+`,
+    };
 
-
-    await transporter.sendMail(mailOptions);
+    try {
+      const info = await transporter.sendMail(mailOptions);
+      console.log("Email sent successfully:", info.messageId, info.response);
+    } catch (emailError) {
+      console.error("Failed to send email:", emailError);
+      throw emailError; // Re-throw to hit the outer catch block
+    }
     console.log(`Email sent to ${order.email}`);
 
-    res.status(200).json({ message: 'Payment success recorded and email sent', orderId, txHash: reference });
+    res
+      .status(200)
+      .json({
+        message: "Payment success recorded and email sent",
+        orderId,
+        txHash: reference,
+      });
   } catch (error) {
-    console.error('Error recording payment success or sending email:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error("Error recording payment success or sending email:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -424,4 +479,3 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
-
