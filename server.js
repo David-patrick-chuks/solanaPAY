@@ -84,7 +84,7 @@ const transporter = nodemailer.createTransport({
   // host: "smtp.zoho.com",
   service : "gmail", // Use Gmail service
   // port: 465,
-  secure: true, // use SSL
+  // secure: true, // use SSL
   auth: {
     user: emailUser,
     pass: emailPass,
