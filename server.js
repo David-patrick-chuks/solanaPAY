@@ -81,8 +81,9 @@ const Order = mongoose.model("Order", orderSchema);
 
 // Email Transporter
 const transporter = nodemailer.createTransport({
-  host: "smtp.zoho.com",
-  port: 465,
+  // host: "smtp.zoho.com",
+  service : "gmail", // Use Gmail service
+  // port: 465,
   secure: true, // use SSL
   auth: {
     user: emailUser,
@@ -366,9 +367,24 @@ app.post("/api/payment/success", async (req, res) => {
     // Send Email
 
     const mailOptions = {
-      from: '"Zule AI Team" <support@zuleai.xyz>',
+      from: '"Zule AI Team" <zuleaixyz@gmail.com>',
       to: order.email,
       subject: "Zule Mesh Solutions - Order Confirmation",
+      text: `Dear ${order.shippingAddress.fullName},\n\nYour order (#${
+        order.orderId
+      }) was confirmed on ${new Date().toLocaleString("en-US", {
+        timeZone: "Africa/Lagos",
+      })} (WAT). Review your order details below:\n\nOrder ID: ${
+        order.orderId
+      }\nTracking Number: ${order.trackingNumber}\nEstimated Delivery: ${
+        order.estimatedDelivery
+      }\nTotal: ${order.items
+        .reduce((sum, item) => sum + item.price * item.quantity, 0)
+        .toFixed(3)} SOL\n\nTrack your order: https://mesh.zuleai.xyz/tracking?orderId=${
+        order.orderId
+      }&email=${encodeURIComponent(
+        order.email
+      )}\n\nThank you for choosing Zule Mesh Solutions.\n\nZule Mesh Solutions © 2025\nhttps://zuleai.xyz | https://x.com/Zule_AI`,
       html: `
 <!DOCTYPE html>
 <html lang="en">
@@ -439,7 +455,7 @@ app.post("/api/payment/success", async (req, res) => {
         <p style="margin: 0;">Zule Mesh Solutions © 2025</p>
         <p style="margin: 8px 0 0;">
           <a href="https://zuleai.xyz" style="color: #00b7eb; text-decoration: none; margin: 0 10px;">zuleai.xyz</a> | 
-          <a href="https://x.com/zulemesh" style="color: #00b7eb; text-decoration: none; margin: 0 10px;">X</a>
+          <a href="https://x.com/Zule_AI" style="color: #00b7eb; text-decoration: none; margin: 0 10px;">X</a>
         </p>
       </td>
     </tr>
@@ -450,13 +466,16 @@ app.post("/api/payment/success", async (req, res) => {
     };
 
     try {
-      const info = await transporter.sendMail(mailOptions);
-      console.log("Email sent successfully:", info.messageId, info.response);
+   console.log("Attempting to send email to:", order.email);
+    console.log("Using email user:", emailUser);
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Email sent successfully:", info.messageId, info.response);
+    console.log(`Email sent to ${order.email}`);
     } catch (emailError) {
       console.error("Failed to send email:", emailError);
       throw emailError; // Re-throw to hit the outer catch block
     }
-    console.log(`Email sent to ${order.email}`);
+    
 
     res.status(200).json({
       message: "Payment success recorded and email sent",
@@ -466,6 +485,78 @@ app.post("/api/payment/success", async (req, res) => {
   } catch (error) {
     console.error("Error recording payment success or sending email:", error);
     res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+
+// Test Email Endpoint
+app.post("/api/test-email", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: "Missing email in request body" });
+    }
+
+    const mailOptions = {
+      from: '"Zule AI Team" <zuleaixyz@gmail.com>',
+      to: email,
+      subject: "Zule Mesh Solutions - Test Email",
+      text: `Dear Customer,\n\nThis is a test email from Zule Mesh Solutions to confirm our email system is working correctly.\n\nSent on: ${new Date().toLocaleString(
+        "en-US",
+        { timeZone: "Africa/Lagos" }
+      )} (WAT)\n\nThank you,\nZule Mesh Solutions Team\nhttps://zuleai.xyz`,
+      html: `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zule Mesh Solutions - Test Email</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Helvetica Neue', Arial, Helvetica, sans-serif; background-color: #000000; color: #ffffff;">
+  <table role="presentation" style="width: 100%; max-width: 600px; margin: 40px auto; background-color: #0a0a0a; border-collapse: collapse; border-radius: 12px; box-shadow: 0 2px 10px rgba(0, 183, 235, 0.15);">
+    <tr>
+      <td style="padding: 20px; text-align: center; background-color: #000000; border-radius: 12px 12px 0 0;">
+        <img src="https://raw.githubusercontent.com/David-patrick-chuks/ZULE_ASSET/main/public/watermark_logo.png" alt="Zule Mesh Solutions Logo" style="max-width: 120px; margin-bottom: 10px;">
+        <h1 style="color: #ffffff; font-size: 24px; font-weight: 700; margin: 0; letter-spacing: 0.5px;">Test Email</h1>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 40px 30px; background-color: #0a0a0a;">
+        <p style="font-size: 16px; line-height: 1.5; color: #e0e0e0; margin: 0 0 20px;">Dear Customer,</p>
+        <p style="font-size: 16px; line-height: 1.5; color: #e0e0e0; margin: 0 0 20px;">
+          This is a test email from Zule Mesh Solutions to confirm our email system is working correctly. It was sent on ${new Date().toLocaleString(
+            "en-US",
+            { timeZone: "Africa/Lagos" }
+          )} (WAT).
+        </p>
+        <p style="font-size: 16px; line-height: 1.5; color: #e0e0e0; margin: 0;">Thank you for your attention.</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 20px; text-align: center; background-color: #000000; border-radius: 0 0 12px 12px; font-size: 12px; color: #999999;">
+        <p style="margin: 0;">Zule Mesh Solutions © 2025</p>
+        <p style="margin: 8px 0 0;">
+          <a href="https://zuleai.xyz" style="color: #00b7eb; text-decoration: none; margin: 0 10px;">zuleai.xyz</a> | 
+          <a href="https://x.com/zulemesh" style="color: #00b7eb; text-decoration: none; margin: 0 10px;">X</a>
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`,
+    };
+
+    console.log("Testing email sending to:", email);
+    console.log("Using email user:", emailUser);
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Test email sent successfully:", info.messageId, info.response);
+
+    res.status(200).json({ message: "Test email sent successfully", messageId: info.messageId });
+  } catch (error) {
+    console.error("Error sending test email:", error);
+    res.status(500).json({ error: "Failed to send test email", details: error.message });
   }
 });
 
