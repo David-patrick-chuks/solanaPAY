@@ -366,7 +366,7 @@ app.post("/api/payment/success", async (req, res) => {
     // Send Email
 
     const mailOptions = {
-      from: emailUser,
+      from: '"Zule AI Team" <support@zuleai.xyz>',
       to: order.email,
       subject: "Zule Mesh Solutions - Order Confirmation",
       html: `
@@ -458,13 +458,11 @@ app.post("/api/payment/success", async (req, res) => {
     }
     console.log(`Email sent to ${order.email}`);
 
-    res
-      .status(200)
-      .json({
-        message: "Payment success recorded and email sent",
-        orderId,
-        txHash: reference,
-      });
+    res.status(200).json({
+      message: "Payment success recorded and email sent",
+      orderId,
+      txHash: reference,
+    });
   } catch (error) {
     console.error("Error recording payment success or sending email:", error);
     res.status(500).json({ error: "Internal Server Error" });
